@@ -51,13 +51,13 @@ const btnBase = (active,color="#00e5ff") => ({
   flex:1, padding:"7px 0",
   border:`1px solid ${active?color:"#1e2d45"}`,
   background:active?`rgba(${color==="#00e5ff"?"0,229,255":color==="#00ff88"?"0,255,136":"255,64,96"},0.1)`:"transparent",
-  color:active?color:"#475569", borderRadius:6, fontSize:"0.75rem", cursor:"pointer"
+  color:active?color:"#94a3b8", borderRadius:6, fontSize:"0.75rem", cursor:"pointer"
 });
 
 function Field({label,children}){
   return(
     <div>
-      <label style={{display:"block",fontSize:"0.6rem",color:"#475569",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:5}}>{label}</label>
+      <label style={{display:"block",fontSize:"0.6rem",color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:5}}>{label}</label>
       {children}
     </div>
   );
@@ -66,7 +66,7 @@ function Field({label,children}){
 function StatCard({label,val,color}){
   return(
     <div style={{background:"#111827",border:"1px solid #1e2d45",borderRadius:10,padding:"12px 14px"}}>
-      <div style={{fontSize:"0.6rem",color:"#475569",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>{label}</div>
+      <div style={{fontSize:"0.6rem",color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>{label}</div>
       <div style={{fontSize:"1.3rem",fontWeight:700,color}}>{val}</div>
     </div>
   );
@@ -152,7 +152,7 @@ function App(){
           <div style={{fontSize:"1.1rem",fontWeight:700,fontFamily:"'Syne',sans-serif",letterSpacing:"-0.02em"}}>
             ⚡ <span style={{color:"#00e5ff"}}>Valhalla</span> Journal
           </div>
-          <div style={{fontSize:"0.6rem",color:"#475569",marginTop:1}}>NAS100 · Pepperstone</div>
+          <div style={{fontSize:"0.6rem",color:"#94a3b8",marginTop:1}}>NAS100 · Pepperstone</div>
         </div>
         <div style={{display:"flex",gap:6}}>
           {[["journal","📓"],["stats","📈"],["calc","📊"]].map(([v,icon])=>(
@@ -174,7 +174,7 @@ function App(){
             {label:"Esta sem",   val:fmtUSD(curWeekPnL),               color:curWeekPnL>=0?"#00ff88":"#ff4060"},
           ].map(k=>(
             <div key={k.label} style={{background:"#111827",border:"1px solid #1e2d45",borderRadius:9,padding:"9px 10px"}}>
-              <div style={{fontSize:"0.55rem",color:"#475569",textTransform:"uppercase",marginBottom:3}}>{k.label}</div>
+              <div style={{fontSize:"0.55rem",color:"#94a3b8",textTransform:"uppercase",marginBottom:3}}>{k.label}</div>
               <div style={{fontSize:"clamp(0.75rem,2.2vw,1rem)",fontWeight:700,color:k.color}}>{k.val}</div>
             </div>
           ))}
@@ -242,7 +242,7 @@ function App(){
                           : <input type="number" placeholder="ej: 10.00" value={form.pnlUSD} onChange={e=>setF("pnlUSD",e.target.value)} style={{...inputStyle,flex:1}}/>
                         }
                         {form.pnlMode==="pct" && form.pnlPct && (
-                          <span style={{color:"#475569",fontSize:"0.7rem",whiteSpace:"nowrap"}}>${(config.capital*(parseFloat(form.pnlPct)/100)).toFixed(2)}</span>
+                          <span style={{color:"#94a3b8",fontSize:"0.7rem",whiteSpace:"nowrap"}}>${(config.capital*(parseFloat(form.pnlPct)/100)).toFixed(2)}</span>
                         )}
                       </div>
                     </Field>
@@ -263,7 +263,7 @@ function App(){
           )}
 
           {weekKeys.length===0 && (
-            <div style={{textAlign:"center",color:"#374151",padding:"50px 0",fontSize:"0.8rem",lineHeight:2}}>
+            <div style={{textAlign:"center",color:"#64748b",padding:"50px 0",fontSize:"0.8rem",lineHeight:2}}>
               No hay operaciones aún.<br/>Presiona "+ Registrar operación" para empezar.
             </div>
           )}
@@ -278,10 +278,10 @@ function App(){
               <div key={wk} style={{marginBottom:9}}>
                 <div onClick={()=>setExpanded(open&&wk!==curWeek?null:wk)} style={{background:"#111827",border:`1px solid ${wk===curWeek?"#1e3a5f":"#1e2d45"}`,borderRadius:open?"10px 10px 0 0":10,padding:"11px 13px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}>
                   <div>
-                    <div style={{fontSize:"0.6rem",color:"#475569",marginBottom:2}}>{wk===curWeek?"● SEMANA ACTUAL  · ":""}{weekLabel(wk)}</div>
+                    <div style={{fontSize:"0.6rem",color:"#94a3b8",marginBottom:2}}>{wk===curWeek?"● SEMANA ACTUAL  · ":""}{weekLabel(wk)}</div>
                     <div style={{display:"flex",alignItems:"center",gap:10}}>
                       <span style={{fontSize:"0.9rem",fontWeight:700,color:wPnL>=0?"#00ff88":"#ff4060"}}>{fmtUSD(wPnL)}</span>
-                      <span style={{fontSize:"0.65rem",color:"#475569"}}>{wt.length} ops · {wW}W {wL}L</span>
+                      <span style={{fontSize:"0.65rem",color:"#94a3b8"}}>{wt.length} ops · {wW}W {wL}L</span>
                     </div>
                   </div>
                   <div style={{display:"flex",gap:4,flexWrap:"wrap",maxWidth:80,justifyContent:"flex-end"}}>
@@ -298,18 +298,18 @@ function App(){
                           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2,flexWrap:"wrap"}}>
                             <span style={{fontSize:"0.75rem",fontWeight:700,color:t.direction==="BUY"?"#00ff88":"#ff4060"}}>{t.direction}</span>
                             <span style={{fontSize:"0.7rem",color:"#64748b"}}>{t.instrument}</span>
-                            <span style={{fontSize:"0.65rem",color:"#374151"}}>1:{t.rr}</span>
-                            <span style={{fontSize:"0.65rem",color:"#374151"}}>{t.pattern}</span>
+                            <span style={{fontSize:"0.65rem",color:"#64748b"}}>1:{t.rr}</span>
+                            <span style={{fontSize:"0.65rem",color:"#64748b"}}>{t.pattern}</span>
                           </div>
                           <div style={{display:"flex",alignItems:"center",gap:8}}>
                             <span style={{fontSize:"0.85rem",fontWeight:700,color:t.pnl>=0?"#00ff88":"#ff4060"}}>{fmtUSD(t.pnl)}</span>
-                            <span style={{fontSize:"0.65rem",color:"#374151"}}>{t.date}</span>
-                            {t.notes&&<span style={{fontSize:"0.65rem",color:"#374151",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.notes}</span>}
+                            <span style={{fontSize:"0.65rem",color:"#64748b"}}>{t.date}</span>
+                            {t.notes&&<span style={{fontSize:"0.65rem",color:"#64748b",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.notes}</span>}
                           </div>
                         </div>
                         <div style={{display:"flex",gap:4}}>
-                          <button onClick={()=>startEdit(t)} style={{padding:"4px 8px",border:"1px solid #1e2d45",background:"transparent",color:"#475569",borderRadius:5,fontSize:"0.65rem",cursor:"pointer"}}>✎</button>
-                          <button onClick={()=>setTrades(ts=>ts.filter(x=>x.id!==t.id))} style={{padding:"4px 8px",border:"1px solid #1e2d45",background:"transparent",color:"#475569",borderRadius:5,fontSize:"0.65rem",cursor:"pointer"}}>✕</button>
+                          <button onClick={()=>startEdit(t)} style={{padding:"4px 8px",border:"1px solid #1e2d45",background:"transparent",color:"#94a3b8",borderRadius:5,fontSize:"0.65rem",cursor:"pointer"}}>✎</button>
+                          <button onClick={()=>setTrades(ts=>ts.filter(x=>x.id!==t.id))} style={{padding:"4px 8px",border:"1px solid #1e2d45",background:"transparent",color:"#94a3b8",borderRadius:5,fontSize:"0.65rem",cursor:"pointer"}}>✕</button>
                         </div>
                       </div>
                     ))}
@@ -331,15 +331,15 @@ function App(){
 
           {/* P&L semanal */}
           <div style={{background:"#111827",border:"1px solid #1e2d45",borderRadius:11,padding:15,marginBottom:12}}>
-            <div style={{fontSize:"0.62rem",color:"#475569",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:12}}>P&L por semana</div>
-            {weekKeys.length===0 && <div style={{color:"#374151",fontSize:"0.75rem"}}>Sin datos aún</div>}
+            <div style={{fontSize:"0.62rem",color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:12}}>P&L por semana</div>
+            {weekKeys.length===0 && <div style={{color:"#64748b",fontSize:"0.75rem"}}>Sin datos aún</div>}
             {weekKeys.slice(0,10).map(wk=>{
               const wPnL=weekGroups[wk].reduce((s,t)=>s+t.pnl,0);
               const maxA=Math.max(...weekKeys.map(w=>Math.abs(weekGroups[w].reduce((s,t)=>s+t.pnl,0))),1);
               const bw=(Math.abs(wPnL)/maxA)*48;
               return(
                 <div key={wk} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
-                  <div style={{fontSize:"0.62rem",color:"#475569",width:65,flexShrink:0}}>{weekLabel(wk)}</div>
+                  <div style={{fontSize:"0.62rem",color:"#94a3b8",width:65,flexShrink:0}}>{weekLabel(wk)}</div>
                   <div style={{flex:1,height:16,background:"#0d1117",borderRadius:4,position:"relative",overflow:"hidden"}}>
                     <div style={{position:"absolute",left:wPnL>=0?"50%":"auto",right:wPnL<0?"50%":"auto",width:bw+"%",height:"100%",background:wPnL>=0?"rgba(0,255,136,0.4)":"rgba(255,64,96,0.4)",borderRadius:3}}/>
                   </div>
@@ -351,8 +351,8 @@ function App(){
 
           {/* Por patrón */}
           <div style={{background:"#111827",border:"1px solid #1e2d45",borderRadius:11,padding:15,marginBottom:12}}>
-            <div style={{fontSize:"0.62rem",color:"#475569",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:12}}>Rendimiento por patrón</div>
-            {trades.length===0 && <div style={{color:"#374151",fontSize:"0.75rem"}}>Sin datos aún</div>}
+            <div style={{fontSize:"0.62rem",color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:12}}>Rendimiento por patrón</div>
+            {trades.length===0 && <div style={{color:"#64748b",fontSize:"0.75rem"}}>Sin datos aún</div>}
             {PATTERNS.map(p=>{
               const pts=trades.filter(t=>t.pattern===p);
               if(!pts.length) return null;
@@ -362,7 +362,7 @@ function App(){
               return(
                 <div key={p} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,padding:"7px 0",borderBottom:"1px solid #1e2d45"}}>
                   <div style={{flex:1,fontSize:"0.75rem"}}>{p}</div>
-                  <div style={{fontSize:"0.65rem",color:"#475569"}}>{pts.length} ops</div>
+                  <div style={{fontSize:"0.65rem",color:"#94a3b8"}}>{pts.length} ops</div>
                   <div style={{fontSize:"0.75rem",color:wr>=50?"#00ff88":"#ff4060",width:38,textAlign:"right"}}>{wr}%</div>
                   <div style={{fontSize:"0.75rem",fontWeight:700,color:pnl>=0?"#00ff88":"#ff4060",width:58,textAlign:"right"}}>{fmtUSD(pnl)}</div>
                 </div>
@@ -373,15 +373,15 @@ function App(){
           {best && (
             <div style={{display:"grid",gridTemplateColumns:worst?"1fr 1fr":"1fr",gap:9}}>
               <div style={{background:"rgba(0,255,136,0.05)",border:"1px solid rgba(0,255,136,0.2)",borderRadius:10,padding:12}}>
-                <div style={{fontSize:"0.6rem",color:"#475569",marginBottom:4}}>MEJOR TRADE</div>
+                <div style={{fontSize:"0.6rem",color:"#94a3b8",marginBottom:4}}>MEJOR TRADE</div>
                 <div style={{fontSize:"1rem",fontWeight:700,color:"#00ff88"}}>{fmtUSD(best.pnl)}</div>
-                <div style={{fontSize:"0.65rem",color:"#475569",marginTop:2}}>{best.instrument} · {best.date}</div>
+                <div style={{fontSize:"0.65rem",color:"#94a3b8",marginTop:2}}>{best.instrument} · {best.date}</div>
               </div>
               {worst && (
                 <div style={{background:"rgba(255,64,96,0.05)",border:"1px solid rgba(255,64,96,0.2)",borderRadius:10,padding:12}}>
-                  <div style={{fontSize:"0.6rem",color:"#475569",marginBottom:4}}>PEOR TRADE</div>
+                  <div style={{fontSize:"0.6rem",color:"#94a3b8",marginBottom:4}}>PEOR TRADE</div>
                   <div style={{fontSize:"1rem",fontWeight:700,color:"#ff4060"}}>{fmtUSD(worst.pnl)}</div>
-                  <div style={{fontSize:"0.65rem",color:"#475569",marginTop:2}}>{worst.instrument} · {worst.date}</div>
+                  <div style={{fontSize:"0.65rem",color:"#94a3b8",marginTop:2}}>{worst.instrument} · {worst.date}</div>
                 </div>
               )}
             </div>
@@ -392,7 +392,7 @@ function App(){
         {view==="calc" && <>
           {/* Config */}
           <div style={{background:"#111827",border:"1px solid #1e2d45",borderRadius:11,padding:15,marginBottom:12}}>
-            <div style={{fontSize:"0.62rem",color:"#475569",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:13}}>Configuración de cuenta</div>
+            <div style={{fontSize:"0.62rem",color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:13}}>Configuración de cuenta</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
               <Field label="Capital base ($)">
                 <input type="number" value={config.capital} onChange={e=>setConfig(c=>({...c,capital:parseFloat(e.target.value)||500}))} style={inputStyle}/>
@@ -409,18 +409,18 @@ function App(){
 
           {/* Lotaje */}
           <div style={{background:"#111827",border:"1px solid #1e2d45",borderRadius:11,padding:15,marginBottom:12}}>
-            <div style={{fontSize:"0.62rem",color:"#475569",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:13}}>Calculadora de riesgo</div>
+            <div style={{fontSize:"0.62rem",color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:13}}>Calculadora de riesgo</div>
             {[1,1.5,2].map(r=>{
               const ra=curCapital*(config.riskPct/100), tp=ra*r;
               return(
                 <div key={r} style={{display:"flex",alignItems:"center",gap:10,marginBottom:9,padding:"10px 12px",background:"#0d1117",borderRadius:8}}>
-                  <div style={{fontSize:"0.75rem",color:"#475569",width:36}}>1:{r}</div>
+                  <div style={{fontSize:"0.75rem",color:"#94a3b8",width:36}}>1:{r}</div>
                   <div style={{flex:1}}>
                     <div style={{fontSize:"0.7rem",color:"#ff4060"}}>SL: ${ra.toFixed(2)}</div>
                     <div style={{fontSize:"0.7rem",color:"#00ff88"}}>TP: ${tp.toFixed(2)}</div>
                   </div>
                   <div style={{textAlign:"right"}}>
-                    <div style={{fontSize:"0.6rem",color:"#475569"}}>capital actual</div>
+                    <div style={{fontSize:"0.6rem",color:"#94a3b8"}}>capital actual</div>
                     <div style={{fontSize:"0.85rem",fontWeight:700,color:"#00e5ff"}}>${curCapital.toFixed(2)}</div>
                   </div>
                 </div>
@@ -430,7 +430,7 @@ function App(){
 
           {/* Milestones */}
           <div style={{background:"#111827",border:"1px solid #1e2d45",borderRadius:11,padding:15,marginBottom:12}}>
-            <div style={{fontSize:"0.62rem",color:"#475569",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:13}}>Tiempo estimado a metas</div>
+            <div style={{fontSize:"0.62rem",color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:13}}>Tiempo estimado a metas</div>
             {wins+losses < 5 && <div style={{fontSize:"0.72rem",color:"#64748b",marginBottom:12,padding:"8px 10px",background:"#0d1117",borderRadius:7}}>⏳ Registra al menos 5 operaciones para ver estimados reales</div>}
             {[[1000,"#00e5ff"],[5000,"#00ff88"],[10000,"#ffd700"],[50000,"#ff9500"],[200000,"#ff4060"]].map(([t,c])=>{
               if(curCapital>=t) return(
@@ -459,10 +459,10 @@ function App(){
 
           {/* Progreso */}
           <div style={{background:"#111827",border:"1px solid #1e2d45",borderRadius:11,padding:15}}>
-            <div style={{fontSize:"0.62rem",color:"#475569",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:12}}>Progreso de cuenta</div>
+            <div style={{fontSize:"0.62rem",color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:12}}>Progreso de cuenta</div>
             {[["Capital inicial","$"+config.capital.toFixed(2),"#64748b"],["P&L acumulado",fmtUSD(totalPnL),totalPnL>=0?"#00ff88":"#ff4060"]].map(([l,v,c])=>(
               <div key={l} style={{display:"flex",justifyContent:"space-between",marginBottom:7}}>
-                <span style={{fontSize:"0.7rem",color:"#475569"}}>{l}</span>
+                <span style={{fontSize:"0.7rem",color:"#94a3b8"}}>{l}</span>
                 <span style={{fontSize:"0.8rem",fontWeight:700,color:c}}>{v}</span>
               </div>
             ))}
@@ -474,7 +474,7 @@ function App(){
             <div style={{height:6,background:"#0d1117",borderRadius:3,overflow:"hidden"}}>
               <div style={{height:"100%",width:Math.min(100,curCapital/1000*100)+"%",background:"linear-gradient(90deg,#00e5ff,#00ff88)",borderRadius:3,transition:"width 0.5s"}}/>
             </div>
-            <div style={{fontSize:"0.6rem",color:"#374151",marginTop:4,textAlign:"right"}}>Meta próxima: $1,000</div>
+            <div style={{fontSize:"0.6rem",color:"#64748b",marginTop:4,textAlign:"right"}}>Meta próxima: $1,000</div>
           </div>
         </>}
 
