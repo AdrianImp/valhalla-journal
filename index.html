@@ -123,18 +123,21 @@ function App(){
   const curWeek=getWeekKey(today());
   const curWeekPnL=(weekGroups[curWeek]||[]).reduce((s,t)=>s+t.pnl,0);
 
-  const best  = trades.reduce((b,t)=>t.pnl>(b?.pnl??-Infinity)?t:b,null);
-  const worst = trades.reduce((w,t)=>t.pnl<(w?.pnl??Infinity)?t:w,null);
+  const best  = trades.filter(t=>t.pnl>0).reduce((b,t)=>t.pnl>(b?.pnl??-Infinity)?t:b,null);
+  const worst = trades.filter(t=>t.pnl<0).reduce((w,t)=>t.pnl<(w?.pnl??Infinity)?t:w,null);
 
   // ── Milestone calc ──
   function weeksTo(target){
-    const ev=(config.riskPct/100)*( (wins/(wins+losses||1))*parseFloat(form.rr||1.5) - (losses/(wins+losses||1)) );
+    if(wins+losses < 5) return null;
+    const wr = wins/(wins+losses);
+    const avgRR = trades.filter(t=>t.result==="WIN").reduce((s,t)=>s+t.rr,0) / (wins||1);
+    const ev = (config.riskPct/100) * (wr*avgRR - (1-wr));
     if(ev<=0) return null;
     let cap=curCapital, w=0;
     while(cap<target && w<5000){ cap*=(1+ev); w++; }
     return w;
   }
-  function fmtW(w){ if(!w||w>4999)return "largo plazo"; if(w<5)return w+"sem"; if(w<52)return "~"+Math.round(w/4.3)+"m"; return "~"+(w/52).toFixed(1)+"a"; }
+  function fmtW(w){ if(w===null) return "necesitas 5+ trades"; if(w>4999) return "revisa tu estrategia"; if(w<5)return w+" sem"; if(w<52)return "~"+Math.round(w/4.3)+" meses"; return "~"+(w/52).toFixed(1)+" años"; }
 
   const rrNum = parseFloat(form.rr||1.5);
   const riskAmt = curCapital*(config.riskPct/100);
@@ -367,18 +370,20 @@ function App(){
             })}
           </div>
 
-          {best && worst && (
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
+          {best && (
+            <div style={{display:"grid",gridTemplateColumns:worst?"1fr 1fr":"1fr",gap:9}}>
               <div style={{background:"rgba(0,255,136,0.05)",border:"1px solid rgba(0,255,136,0.2)",borderRadius:10,padding:12}}>
                 <div style={{fontSize:"0.6rem",color:"#475569",marginBottom:4}}>MEJOR TRADE</div>
                 <div style={{fontSize:"1rem",fontWeight:700,color:"#00ff88"}}>{fmtUSD(best.pnl)}</div>
                 <div style={{fontSize:"0.65rem",color:"#475569",marginTop:2}}>{best.instrument} · {best.date}</div>
               </div>
-              <div style={{background:"rgba(255,64,96,0.05)",border:"1px solid rgba(255,64,96,0.2)",borderRadius:10,padding:12}}>
-                <div style={{fontSize:"0.6rem",color:"#475569",marginBottom:4}}>PEOR TRADE</div>
-                <div style={{fontSize:"1rem",fontWeight:700,color:"#ff4060"}}>{fmtUSD(worst.pnl)}</div>
-                <div style={{fontSize:"0.65rem",color:"#475569",marginTop:2}}>{worst.instrument} · {worst.date}</div>
-              </div>
+              {worst && (
+                <div style={{background:"rgba(255,64,96,0.05)",border:"1px solid rgba(255,64,96,0.2)",borderRadius:10,padding:12}}>
+                  <div style={{fontSize:"0.6rem",color:"#475569",marginBottom:4}}>PEOR TRADE</div>
+                  <div style={{fontSize:"1rem",fontWeight:700,color:"#ff4060"}}>{fmtUSD(worst.pnl)}</div>
+                  <div style={{fontSize:"0.65rem",color:"#475569",marginTop:2}}>{worst.instrument} · {worst.date}</div>
+                </div>
+              )}
             </div>
           )}
         </>}
@@ -426,11 +431,12 @@ function App(){
           {/* Milestones */}
           <div style={{background:"#111827",border:"1px solid #1e2d45",borderRadius:11,padding:15,marginBottom:12}}>
             <div style={{fontSize:"0.62rem",color:"#475569",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:13}}>Tiempo estimado a metas</div>
+            {wins+losses < 5 && <div style={{fontSize:"0.72rem",color:"#64748b",marginBottom:12,padding:"8px 10px",background:"#0d1117",borderRadius:7}}>⏳ Registra al menos 5 operaciones para ver estimados reales</div>}
             {[[1000,"#00e5ff"],[5000,"#00ff88"],[10000,"#ffd700"],[50000,"#ff9500"],[200000,"#ff4060"]].map(([t,c])=>{
               if(curCapital>=t) return(
                 <div key={t} style={{display:"flex",gap:10,alignItems:"center",marginBottom:9}}>
                   <div style={{width:7,height:7,borderRadius:"50%",background:c,flexShrink:0}}/>
-                  <span style={{fontSize:"0.85rem",fontWeight:700,color:c,minWidth:75}}>${t.toLocaleString()}</span>
+                  <span style={{fontSize:"0.85rem",fontWeight:700,color:"#e2e8f0",minWidth:80}}>${t.toLocaleString()}</span>
                   <span style={{fontSize:"0.7rem",color:"#00ff88"}}>✓ Alcanzado</span>
                 </div>
               );
@@ -440,8 +446,8 @@ function App(){
                 <div key={t} style={{marginBottom:11}}>
                   <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:4}}>
                     <div style={{width:7,height:7,borderRadius:"50%",background:c,flexShrink:0}}/>
-                    <span style={{fontSize:"0.85rem",fontWeight:700,color:c,minWidth:75}}>${t.toLocaleString()}</span>
-                    <span style={{fontSize:"0.7rem",color:"#475569"}}>{fmtW(w)}</span>
+                    <span style={{fontSize:"0.85rem",fontWeight:700,color:"#e2e8f0",minWidth:80}}>${t.toLocaleString()}</span>
+                    <span style={{fontSize:"0.72rem",color:"#94a3b8"}}>{fmtW(w)}</span>
                   </div>
                   <div style={{height:4,background:"#0d1117",borderRadius:2,overflow:"hidden"}}>
                     <div style={{height:"100%",width:pct+"%",background:c,borderRadius:2,transition:"width 0.5s"}}/>
