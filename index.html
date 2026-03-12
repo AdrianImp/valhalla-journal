@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Valhalla Journal</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#07090f; color:#e2e8f0; font-family:'Space Mono',monospace; }
+  input,select,button { font-family:'Space Mono',monospace; }
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; }
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-track { background:#0d1117; }
+  ::-webkit-scrollbar-thumb { background:#1e2d45; border-radius:2px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const STORAGE_KEY = "valhalla-trades-v2";
+const CONFIG_KEY  = "valhalla-config-v2";
+const INSTRUMENTS = ["NAS100","SPX500","US30","XAUUSD"];
+const PATTERNS    = ["Doji","Martillo","Martillo Invertido","Morning Star","Evening Star"];
+
+const fmtUSD = n => (n>=0?"+":"-")+"$"+Math.abs(n).toFixed(2);
+const today  = () => new Date().toISOString().split("T")[0];
+
+function getWeekKey(dateStr){
+  const d = new Date(dateStr+"T12:00:00");
+  const diff = d.getDate()-d.getDay()+(d.getDay()===0?-6:1);
+  return new Date(new Date(d).setDate(diff)).toISOString().split("T")[0];
+}
+function weekLabel(wk){
+  const d=new Date(wk+"T12:00:00"), e=new Date(d);
+  e.setDate(e.getDate()+4);
+  return `${d.getDate()}/${d.getMonth()+1} – ${e.getDate()}/${e.getMonth()+1}`;
+}
+
+const inputStyle = {
+  width:"100%", background:"#0d1117", border:"1px solid #1e2d45",
+  color:"#e2e8f0", borderRadius:6, padding:"8px 10px",
+  fontSize:"0.8rem", outline:"none"
+};
+const btnBase = (active,color="#00e5ff") => ({
+  flex:1, padding:"7px 0",
+  border:`1px solid ${active?color:"#1e2d45"}`,
+  background:active?`rgba(${color==="#00e5ff"?"0,229,255":color==="#00ff88"?"0,255,136":"255,64,96"},0.1)`:"transparent",
+  color:active?color:"#475569", borderRadius:6, fontSize:"0.75rem", cursor:"pointer"
+});
+
+function Field({label,children}){
+  return(
+    <div>
+      <label style={{display:"block",fontSize:"0.6rem",color:"#475569",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:5}}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function StatCard({label,val,color}){
+  return(
+    <div style={{background:"#111827",border:"1px solid #1e2d45",borderRadius:10,padding:"12px 14px"}}>
+      <div style={{fontSize:"0.6rem",color:"#475569",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>{label}</div>
+      <div style={{fontSize:"1.3rem",fontWeight:700,color}}>{val}</div>
+    </div>
+  );
+}
+
+function App(){
+  const [trades,  setTrades]  = useState(()=>{ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY))||[]; }catch{ return []; } });
+  const [config,  setConfig]  = useState(()=>{ try{ return JSON.parse(localStorage.getItem(CONFIG_KEY))||{capital:500,riskPct:2}; }catch{ return {capital:500,riskPct:2}; } });
+  const [view,    setView]    = useState("journal");
+  const [showForm,setShowForm]= useState(false);
+  const [editId,  setEditId]  = useState(null);
+  const [expanded,setExpanded]= useState(null);
+
+  const blankForm = {date:today(),instrument:"NAS100",session:"Nueva York",direction:"BUY",pattern:"Doji",rr:"1.5",result:"WIN",pnlMode:"usd",pnlPct:"",pnlUSD:"",notes:""};
+  const [form, setForm] = useState(blankForm);
+
+  useEffect(()=>{ try{ localStorage.setItem(STORAGE_KEY,JSON.stringify(trades)); }catch{} },[trades]);
+  useEffect(()=>{ try{ localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); }catch{} },[config]);
+
+  const setF = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const submitTrade = () => {
+    let pnl=0;
+    if(form.result==="WIN"){
+      pnl = form.pnlMode==="pct" ? config.capital*(parseFloat(form.pnlPct||0)/100) : parseFloat(form.pnlUSD||0);
+    } else if(form.result==="LOSS"){
+      pnl = form.pnlMode==="pct" ? -config.capital*(parseFloat(form.pnlPct||0)/100) : -parseFloat(form.pnlUSD||0);
+    }
+    const t={id:editId||Date.now().toString(),date:form.date,instrument:form.instrument,
+              direction:form.direction,pattern:form.pattern,rr:parseFloat(form.rr),
+              result:form.result,pnl,notes:form.notes};
+    setTrades(ts=> editId ? ts.map(x=>x.id===editId?t:x) : [t,...ts]);
+    setEditId(null); setForm(blankForm); setShowForm(false);
+  };
+
+  const startEdit = t => {
+    setEditId(t.id);
+    setForm({...blankForm,date:t.date,instrument:t.instrument,direction:t.direction,
+              pattern:t.pattern,rr:t.rr.toString(),result:t.result,
+              pnlMode:"usd",pnlUSD:Math.abs(t.pnl).toFixed(2),notes:t.notes||""});
+    setShowForm(true);
+  };
+
+  // ── Aggregates ──
+  const wins=trades.filter(t=>t.result==="WIN").length;
+  const losses=trades.filter(t=>t.result==="LOSS").length;
+  const totalPnL=trades.reduce((s,t)=>s+t.pnl,0);
+  const winRate=wins+losses>0?((wins/(wins+losses))*100).toFixed(1):0;
+  const curCapital=config.capital+totalPnL;
+
+  const weekGroups={};
+  trades.forEach(t=>{ const w=getWeekKey(t.date); (weekGroups[w]||(weekGroups[w]=[])).push(t); });
+  const weekKeys=Object.keys(weekGroups).sort((a,b)=>b.localeCompare(a));
+  const curWeek=getWeekKey(today());
+  const curWeekPnL=(weekGroups[curWeek]||[]).reduce((s,t)=>s+t.pnl,0);
+
+  const best  = trades.reduce((b,t)=>t.pnl>(b?.pnl??-Infinity)?t:b,null);
+  const worst = trades.reduce((w,t)=>t.pnl<(w?.pnl??Infinity)?t:w,null);
+
+  // ── Milestone calc ──
+  function weeksTo(target){
+    const ev=(config.riskPct/100)*( (wins/(wins+losses||1))*parseFloat(form.rr||1.5) - (losses/(wins+losses||1)) );
+    if(ev<=0) return null;
+    let cap=curCapital, w=0;
+    while(cap<target && w<5000){ cap*=(1+ev); w++; }
+    return w;
+  }
+  function fmtW(w){ if(!w||w>4999)return "largo plazo"; if(w<5)return w+"sem"; if(w<52)return "~"+Math.round(w/4.3)+"m"; return "~"+(w/52).toFixed(1)+"a"; }
+
+  const rrNum = parseFloat(form.rr||1.5);
+  const riskAmt = curCapital*(config.riskPct/100);
+  const tpAmt   = riskAmt*rrNum;
+
+  return (
+    <div style={{minHeight:"100vh",background:"#07090f",backgroundImage:"radial-gradient(ellipse at 15% 0%,rgba(0,229,255,0.05) 0%,transparent 40%),radial-gradient(ellipse at 85% 100%,rgba(0,255,136,0.03) 0%,transparent 40%)",paddingBottom:60}}>
+
+      {/* ── Header ── */}
+      <div style={{background:"#0d1117",borderBottom:"1px solid #1e2d45",padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:50}}>
+        <div>
+          <div style={{fontSize:"1.1rem",fontWeight:700,fontFamily:"'Syne',sans-serif",letterSpacing:"-0.02em"}}>
+            ⚡ <span style={{color:"#00e5ff"}}>Valhalla</span> Journal
+          </div>
+          <div style={{fontSize:"0.6rem",color:"#475569",marginTop:1}}>NAS100 · Pepperstone</div>
+        </div>
+        <div style={{display:"flex",gap:6}}>
+          {[["journal","📓"],["stats","📈"],["calc","📊"]].map(([v,icon])=>(
+            <button key={v} onClick={()=>setView(v)} style={{padding:"5px 11px",border:`1px solid ${view===v?"#00e5ff":"#1e2d45"}`,background:view===v?"rgba(0,229,255,0.1)":"transparent",color:view===v?"#00e5ff":"#475569",borderRadius:6,fontSize:"0.65rem",cursor:"pointer",textTransform:"uppercase",letterSpacing:"0.05em"}}>
+              {icon} {v}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{padding:"14px 14px 0"}}>
+
+        {/* ── KPI Strip ── */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:7,marginBottom:12}}>
+          {[
+            {label:"Capital",    val:"$"+curCapital.toFixed(0),        color:curCapital>=config.capital?"#00e5ff":"#ff4060"},
+            {label:"P&L Total",  val:fmtUSD(totalPnL),                 color:totalPnL>=0?"#00ff88":"#ff4060"},
+            {label:"Win Rate",   val:winRate+"%",                       color:winRate>=55?"#00ff88":winRate>=45?"#ffd700":"#ff4060"},
+            {label:"Esta sem",   val:fmtUSD(curWeekPnL),               color:curWeekPnL>=0?"#00ff88":"#ff4060"},
+          ].map(k=>(
+            <div key={k.label} style={{background:"#111827",border:"1px solid #1e2d45",borderRadius:9,padding:"9px 10px"}}>
+              <div style={{fontSize:"0.55rem",color:"#475569",textTransform:"uppercase",marginBottom:3}}>{k.label}</div>
+              <div style={{fontSize:"clamp(0.75rem,2.2vw,1rem)",fontWeight:700,color:k.color}}>{k.val}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* ══════════ JOURNAL ══════════ */}
+        {view==="journal" && <>
+          <button onClick={()=>{if(showForm){setEditId(null);setForm(blankForm);}setShowForm(s=>!s);}} style={{width:"100%",padding:"10px",background:showForm?"#1e2d45":"rgba(0,229,255,0.1)",border:`1px solid ${showForm?"#374151":"#00e5ff"}`,color:showForm?"#64748b":"#00e5ff",borderRadius:9,fontSize:"0.8rem",cursor:"pointer",marginBottom:12,letterSpacing:"0.04em"}}>
+            {showForm?"✕ Cancelar":"+ Registrar operación"}
+          </button>
+
+          {showForm && (
+            <div style={{background:"#111827",border:"1px solid #1e2d45",borderRadius:11,padding:15,marginBottom:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+
+                <Field label="Fecha">
+                  <input type="date" value={form.date} onChange={e=>setF("date",e.target.value)} style={inputStyle}/>
+                </Field>
+
+                <Field label="Instrumento">
+                  <select value={form.instrument} onChange={e=>setF("instrument",e.target.value)} style={inputStyle}>
+                    {INSTRUMENTS.map(i=><option key={i}>{i}</option>)}
+                  </select>
+                </Field>
+
+                <Field label="Dirección">
+                  <div style={{display:"flex",gap:6}}>
+                    {["BUY","SELL"].map(d=>(
+                      <button key={d} onClick={()=>setF("direction",d)} style={btnBase(form.direction===d,d==="BUY"?"#00ff88":"#ff4060")}>{d}</button>
+                    ))}
+                  </div>
+                </Field>
+
+                <Field label="Patrón">
+                  <select value={form.pattern} onChange={e=>setF("pattern",e.target.value)} style={inputStyle}>
+                    {PATTERNS.map(p=><option key={p}>{p}</option>)}
+                  </select>
+                </Field>
+
+                <Field label="Resultado">
+                  <div style={{display:"flex",gap:5}}>
+                    {[["WIN","#00ff88"],["LOSS","#ff4060"],["BE","#ffd700"]].map(([r,c])=>(
+                      <button key={r} onClick={()=>setF("result",r)} style={btnBase(form.result===r,c)}>{r}</button>
+                    ))}
+                  </div>
+                </Field>
+
+                <Field label="R:R">
+                  <select value={form.rr} onChange={e=>setF("rr",e.target.value)} style={inputStyle}>
+                    {["1","1.5","2","2.5","3"].map(v=><option key={v} value={v}>1:{v}</option>)}
+                  </select>
+                </Field>
+
+                {form.result!=="BE" && (
+                  <div style={{gridColumn:"span 2"}}>
+                    <Field label={`P&L (${form.result==="WIN"?"ganancia":"pérdida"})`}>
+                      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                        {["pct","usd"].map(m=>(
+                          <button key={m} onClick={()=>setF("pnlMode",m)} style={{...btnBase(form.pnlMode===m),flex:"none",padding:"6px 12px"}}>
+                            {m==="%"?"%":"USD"}{m==="pct"?"%":"USD"}
+                          </button>
+                        ))}
+                        {form.pnlMode==="pct"
+                          ? <input type="number" placeholder="ej: 2" value={form.pnlPct} onChange={e=>setF("pnlPct",e.target.value)} style={{...inputStyle,flex:1}}/>
+                          : <input type="number" placeholder="ej: 10.00" value={form.pnlUSD} onChange={e=>setF("pnlUSD",e.target.value)} style={{...inputStyle,flex:1}}/>
+                        }
+                        {form.pnlMode==="pct" && form.pnlPct && (
+                          <span style={{color:"#475569",fontSize:"0.7rem",whiteSpace:"nowrap"}}>${(config.capital*(parseFloat(form.pnlPct)/100)).toFixed(2)}</span>
+                        )}
+                      </div>
+                    </Field>
+                  </div>
+                )}
+
+                <div style={{gridColumn:"span 2"}}>
+                  <Field label="Notas (opcional)">
+                    <input type="text" placeholder="ej: zona 4H limpia, buen rechazo..." value={form.notes} onChange={e=>setF("notes",e.target.value)} style={inputStyle}/>
+                  </Field>
+                </div>
+              </div>
+
+              <button onClick={submitTrade} style={{width:"100%",marginTop:12,padding:"10px",background:"rgba(0,229,255,0.15)",border:"1px solid #00e5ff",color:"#00e5ff",borderRadius:8,fontSize:"0.8rem",cursor:"pointer",letterSpacing:"0.06em"}}>
+                {editId?"✓ Guardar cambios":"✓ Registrar operación"}
+              </button>
+            </div>
+          )}
+
+          {weekKeys.length===0 && (
+            <div style={{textAlign:"center",color:"#374151",padding:"50px 0",fontSize:"0.8rem",lineHeight:2}}>
+              No hay operaciones aún.<br/>Presiona "+ Registrar operación" para empezar.
+            </div>
+          )}
+
+          {weekKeys.map(wk=>{
+            const wt=weekGroups[wk];
+            const wPnL=wt.reduce((s,t)=>s+t.pnl,0);
+            const wW=wt.filter(t=>t.result==="WIN").length;
+            const wL=wt.filter(t=>t.result==="LOSS").length;
+            const open=expanded===wk||wk===curWeek;
+            return(
+              <div key={wk} style={{marginBottom:9}}>
+                <div onClick={()=>setExpanded(open&&wk!==curWeek?null:wk)} style={{background:"#111827",border:`1px solid ${wk===curWeek?"#1e3a5f":"#1e2d45"}`,borderRadius:open?"10px 10px 0 0":10,padding:"11px 13px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}>
+                  <div>
+                    <div style={{fontSize:"0.6rem",color:"#475569",marginBottom:2}}>{wk===curWeek?"● SEMANA ACTUAL  · ":""}{weekLabel(wk)}</div>
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <span style={{fontSize:"0.9rem",fontWeight:700,color:wPnL>=0?"#00ff88":"#ff4060"}}>{fmtUSD(wPnL)}</span>
+                      <span style={{fontSize:"0.65rem",color:"#475569"}}>{wt.length} ops · {wW}W {wL}L</span>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:4,flexWrap:"wrap",maxWidth:80,justifyContent:"flex-end"}}>
+                    {wt.map(t=><div key={t.id} style={{width:7,height:7,borderRadius:"50%",background:t.result==="WIN"?"#00ff88":t.result==="LOSS"?"#ff4060":"#ffd700"}}/>)}
+                  </div>
+                </div>
+
+                {open && (
+                  <div style={{background:"#0d1117",border:"1px solid #1e2d45",borderTop:"none",borderRadius:"0 0 10px 10px"}}>
+                    {wt.sort((a,b)=>b.date.localeCompare(a.date)).map((t,i)=>(
+                      <div key={t.id} style={{padding:"10px 13px",borderBottom:i<wt.length-1?"1px solid #111827":"none",display:"flex",alignItems:"center",gap:10}}>
+                        <div style={{width:3,height:34,borderRadius:2,background:t.result==="WIN"?"#00ff88":t.result==="LOSS"?"#ff4060":"#ffd700",flexShrink:0}}/>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2,flexWrap:"wrap"}}>
+                            <span style={{fontSize:"0.75rem",fontWeight:700,color:t.direction==="BUY"?"#00ff88":"#ff4060"}}>{t.direction}</span>
+                            <span style={{fontSize:"0.7rem",color:"#64748b"}}>{t.instrument}</span>
+                            <span style={{fontSize:"0.65rem",color:"#374151"}}>1:{t.rr}</span>
+                            <span style={{fontSize:"0.65rem",color:"#374151"}}>{t.pattern}</span>
+                          </div>
+                          <div style={{display:"flex",alignItems:"center",gap:8}}>
+                            <span style={{fontSize:"0.85rem",fontWeight:700,color:t.pnl>=0?"#00ff88":"#ff4060"}}>{fmtUSD(t.pnl)}</span>
+                            <span style={{fontSize:"0.65rem",color:"#374151"}}>{t.date}</span>
+                            {t.notes&&<span style={{fontSize:"0.65rem",color:"#374151",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.notes}</span>}
+                          </div>
+                        </div>
+                        <div style={{display:"flex",gap:4}}>
+                          <button onClick={()=>startEdit(t)} style={{padding:"4px 8px",border:"1px solid #1e2d45",background:"transparent",color:"#475569",borderRadius:5,fontSize:"0.65rem",cursor:"pointer"}}>✎</button>
+                          <button onClick={()=>setTrades(ts=>ts.filter(x=>x.id!==t.id))} style={{padding:"4px 8px",border:"1px solid #1e2d45",background:"transparent",color:"#475569",borderRadius:5,fontSize:"0.65rem",cursor:"pointer"}}>✕</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </>}
+
+        {/* ══════════ STATS ══════════ */}
+        {view==="stats" && <>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:12}}>
+            <StatCard label="Total operaciones" val={trades.length} color="#00e5ff"/>
+            <StatCard label="Win Rate" val={winRate+"%" } color={winRate>=55?"#00ff88":winRate>=45?"#ffd700":"#ff4060"}/>
+            <StatCard label="Ganadas" val={wins}  color="#00ff88"/>
+            <StatCard label="Perdidas" val={losses} color="#ff4060"/>
+          </div>
+
+          {/* P&L semanal */}
+          <div style={{background:"#111827",border:"1px solid #1e2d45",borderRadius:11,padding:15,marginBottom:12}}>
+            <div style={{fontSize:"0.62rem",color:"#475569",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:12}}>P&L por semana</div>
+            {weekKeys.length===0 && <div style={{color:"#374151",fontSize:"0.75rem"}}>Sin datos aún</div>}
+            {weekKeys.slice(0,10).map(wk=>{
+              const wPnL=weekGroups[wk].reduce((s,t)=>s+t.pnl,0);
+              const maxA=Math.max(...weekKeys.map(w=>Math.abs(weekGroups[w].reduce((s,t)=>s+t.pnl,0))),1);
+              const bw=(Math.abs(wPnL)/maxA)*48;
+              return(
+                <div key={wk} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
+                  <div style={{fontSize:"0.62rem",color:"#475569",width:65,flexShrink:0}}>{weekLabel(wk)}</div>
+                  <div style={{flex:1,height:16,background:"#0d1117",borderRadius:4,position:"relative",overflow:"hidden"}}>
+                    <div style={{position:"absolute",left:wPnL>=0?"50%":"auto",right:wPnL<0?"50%":"auto",width:bw+"%",height:"100%",background:wPnL>=0?"rgba(0,255,136,0.4)":"rgba(255,64,96,0.4)",borderRadius:3}}/>
+                  </div>
+                  <div style={{fontSize:"0.7rem",fontWeight:700,color:wPnL>=0?"#00ff88":"#ff4060",width:58,textAlign:"right"}}>{fmtUSD(wPnL)}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Por patrón */}
+          <div style={{background:"#111827",border:"1px solid #1e2d45",borderRadius:11,padding:15,marginBottom:12}}>
+            <div style={{fontSize:"0.62rem",color:"#475569",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:12}}>Rendimiento por patrón</div>
+            {trades.length===0 && <div style={{color:"#374151",fontSize:"0.75rem"}}>Sin datos aún</div>}
+            {PATTERNS.map(p=>{
+              const pts=trades.filter(t=>t.pattern===p);
+              if(!pts.length) return null;
+              const pw=pts.filter(t=>t.result==="WIN").length;
+              const wr=((pw/pts.length)*100).toFixed(0);
+              const pnl=pts.reduce((s,t)=>s+t.pnl,0);
+              return(
+                <div key={p} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,padding:"7px 0",borderBottom:"1px solid #1e2d45"}}>
+                  <div style={{flex:1,fontSize:"0.75rem"}}>{p}</div>
+                  <div style={{fontSize:"0.65rem",color:"#475569"}}>{pts.length} ops</div>
+                  <div style={{fontSize:"0.75rem",color:wr>=50?"#00ff88":"#ff4060",width:38,textAlign:"right"}}>{wr}%</div>
+                  <div style={{fontSize:"0.75rem",fontWeight:700,color:pnl>=0?"#00ff88":"#ff4060",width:58,textAlign:"right"}}>{fmtUSD(pnl)}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {best && worst && (
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
+              <div style={{background:"rgba(0,255,136,0.05)",border:"1px solid rgba(0,255,136,0.2)",borderRadius:10,padding:12}}>
+                <div style={{fontSize:"0.6rem",color:"#475569",marginBottom:4}}>MEJOR TRADE</div>
+                <div style={{fontSize:"1rem",fontWeight:700,color:"#00ff88"}}>{fmtUSD(best.pnl)}</div>
+                <div style={{fontSize:"0.65rem",color:"#475569",marginTop:2}}>{best.instrument} · {best.date}</div>
+              </div>
+              <div style={{background:"rgba(255,64,96,0.05)",border:"1px solid rgba(255,64,96,0.2)",borderRadius:10,padding:12}}>
+                <div style={{fontSize:"0.6rem",color:"#475569",marginBottom:4}}>PEOR TRADE</div>
+                <div style={{fontSize:"1rem",fontWeight:700,color:"#ff4060"}}>{fmtUSD(worst.pnl)}</div>
+                <div style={{fontSize:"0.65rem",color:"#475569",marginTop:2}}>{worst.instrument} · {worst.date}</div>
+              </div>
+            </div>
+          )}
+        </>}
+
+        {/* ══════════ CALC ══════════ */}
+        {view==="calc" && <>
+          {/* Config */}
+          <div style={{background:"#111827",border:"1px solid #1e2d45",borderRadius:11,padding:15,marginBottom:12}}>
+            <div style={{fontSize:"0.62rem",color:"#475569",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:13}}>Configuración de cuenta</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <Field label="Capital base ($)">
+                <input type="number" value={config.capital} onChange={e=>setConfig(c=>({...c,capital:parseFloat(e.target.value)||500}))} style={inputStyle}/>
+              </Field>
+              <Field label="Riesgo por operación">
+                <div style={{display:"flex",gap:5}}>
+                  {[[1,"1%"],[2,"2%"],[5,"5% ⚠️"]].map(([r,l])=>(
+                    <button key={r} onClick={()=>setConfig(c=>({...c,riskPct:r}))} style={btnBase(config.riskPct===r)}>{l}</button>
+                  ))}
+                </div>
+              </Field>
+            </div>
+          </div>
+
+          {/* Lotaje */}
+          <div style={{background:"#111827",border:"1px solid #1e2d45",borderRadius:11,padding:15,marginBottom:12}}>
+            <div style={{fontSize:"0.62rem",color:"#475569",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:13}}>Calculadora de riesgo</div>
+            {[1,1.5,2].map(r=>{
+              const ra=curCapital*(config.riskPct/100), tp=ra*r;
+              return(
+                <div key={r} style={{display:"flex",alignItems:"center",gap:10,marginBottom:9,padding:"10px 12px",background:"#0d1117",borderRadius:8}}>
+                  <div style={{fontSize:"0.75rem",color:"#475569",width:36}}>1:{r}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:"0.7rem",color:"#ff4060"}}>SL: ${ra.toFixed(2)}</div>
+                    <div style={{fontSize:"0.7rem",color:"#00ff88"}}>TP: ${tp.toFixed(2)}</div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontSize:"0.6rem",color:"#475569"}}>capital actual</div>
+                    <div style={{fontSize:"0.85rem",fontWeight:700,color:"#00e5ff"}}>${curCapital.toFixed(2)}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Milestones */}
+          <div style={{background:"#111827",border:"1px solid #1e2d45",borderRadius:11,padding:15,marginBottom:12}}>
+            <div style={{fontSize:"0.62rem",color:"#475569",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:13}}>Tiempo estimado a metas</div>
+            {[[1000,"#00e5ff"],[5000,"#00ff88"],[10000,"#ffd700"],[50000,"#ff9500"],[200000,"#ff4060"]].map(([t,c])=>{
+              if(curCapital>=t) return(
+                <div key={t} style={{display:"flex",gap:10,alignItems:"center",marginBottom:9}}>
+                  <div style={{width:7,height:7,borderRadius:"50%",background:c,flexShrink:0}}/>
+                  <span style={{fontSize:"0.85rem",fontWeight:700,color:c,minWidth:75}}>${t.toLocaleString()}</span>
+                  <span style={{fontSize:"0.7rem",color:"#00ff88"}}>✓ Alcanzado</span>
+                </div>
+              );
+              const w=weeksTo(t);
+              const pct=Math.min(100,(curCapital/t)*100);
+              return(
+                <div key={t} style={{marginBottom:11}}>
+                  <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:4}}>
+                    <div style={{width:7,height:7,borderRadius:"50%",background:c,flexShrink:0}}/>
+                    <span style={{fontSize:"0.85rem",fontWeight:700,color:c,minWidth:75}}>${t.toLocaleString()}</span>
+                    <span style={{fontSize:"0.7rem",color:"#475569"}}>{fmtW(w)}</span>
+                  </div>
+                  <div style={{height:4,background:"#0d1117",borderRadius:2,overflow:"hidden"}}>
+                    <div style={{height:"100%",width:pct+"%",background:c,borderRadius:2,transition:"width 0.5s"}}/>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Progreso */}
+          <div style={{background:"#111827",border:"1px solid #1e2d45",borderRadius:11,padding:15}}>
+            <div style={{fontSize:"0.62rem",color:"#475569",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:12}}>Progreso de cuenta</div>
+            {[["Capital inicial","$"+config.capital.toFixed(2),"#64748b"],["P&L acumulado",fmtUSD(totalPnL),totalPnL>=0?"#00ff88":"#ff4060"]].map(([l,v,c])=>(
+              <div key={l} style={{display:"flex",justifyContent:"space-between",marginBottom:7}}>
+                <span style={{fontSize:"0.7rem",color:"#475569"}}>{l}</span>
+                <span style={{fontSize:"0.8rem",fontWeight:700,color:c}}>{v}</span>
+              </div>
+            ))}
+            <div style={{height:1,background:"#1e2d45",margin:"10px 0"}}/>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
+              <span style={{fontSize:"0.8rem",color:"#94a3b8",fontWeight:700}}>Capital actual</span>
+              <span style={{fontSize:"1.1rem",fontWeight:700,color:"#00e5ff"}}>${curCapital.toFixed(2)}</span>
+            </div>
+            <div style={{height:6,background:"#0d1117",borderRadius:3,overflow:"hidden"}}>
+              <div style={{height:"100%",width:Math.min(100,curCapital/1000*100)+"%",background:"linear-gradient(90deg,#00e5ff,#00ff88)",borderRadius:3,transition:"width 0.5s"}}/>
+            </div>
+            <div style={{fontSize:"0.6rem",color:"#374151",marginTop:4,textAlign:"right"}}>Meta próxima: $1,000</div>
+          </div>
+        </>}
+
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
